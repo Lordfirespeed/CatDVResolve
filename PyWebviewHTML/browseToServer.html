@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CatDV Server Resolve Plugin</title>
+</head>
+<body>
+
+<form>
+    <h1>Browse to CatDV Server</h1>
+    <label for="address">Server Address:</label>
+    <input type="text" id="address" name="address"><br>
+</form>
+
+<button type="button" id="go_to_server" name="go_to_server">Go</button><br>
+
+<div id="response-container"></div>
+
+<script>
+    let webviewReady = false
+
+    window.addEventListener("pywebviewready", function() {
+        let container = document.getElementById('pywebview-status')
+        container.innerHTML = '<i>pywebview</i> is ready'
+        webviewReady = true
+    })
+
+    const button = document.getElementById("go_to_server")
+
+    button.addEventListener("click", () => {
+        let container = document.getElementById('address')
+        let entered_text = container.value
+        window.location.replace(entered_text)
+    })
+</script>
+</body>
+</html>
