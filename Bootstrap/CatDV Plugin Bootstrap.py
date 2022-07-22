@@ -49,10 +49,11 @@ def activate_virtual_environment(environment_root):
 
 
 activate_virtual_environment(os.path.join(appPath, "venv"))
+os.chdir(appPath)
 sys.path.insert(0, appPath)
 
 import webview
-import catdv_resolve_plugin
+from plugin.main import WebviewApi
 
 try:
     resolve
@@ -64,17 +65,18 @@ def main():
     log_file_path = os.path.join(appPath, "latest.log")
     logging.basicConfig(level=logging.DEBUG, filename=log_file_path, filemode="w", format="%(levelname)s %(asctime)s - %(message)s")
 
+    logging.info('Python %s on %s' % (sys.version, sys.platform))
+
     logoPath = os.path.join(appPath, "logo", "icon.ico")
 
-    resolve_handler = catdv_resolve_plugin.ResolveApiJsonHandler(resolve)
-    webview_api = catdv_resolve_plugin.WebviewApi(resolve_handler)
+    webview_api = WebviewApi(resolve)
 
     with open(os.path.join(appPath, "PyWebviewHTML", "default.html")) as html_file:
         html_string = html_file.read()
 
     window = webview.create_window("DaVinci Resolve - CatDV Integration", "http://localhost:8080/catdv/resolve", js_api=webview_api)
 
-    webview.start(func=lambda: window.set_icon(logoPath), debug=True)
+    webview.start(debug=True)
 
 
 if __name__ == "__main__":
