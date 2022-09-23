@@ -375,9 +375,9 @@ class CatDVInstaller:
             except AssertionError:
                 raise OSError
         elif self.system_platform == self.Platform.Windows:
-            copy(Path(copy_from, "install.bat"), self.temp_path)
+            copy(Path(copy_from, "install-requirements.bat"), self.temp_path)
             try:
-                result = subprocess.run((str(Path(self.temp_path, "install.bat")), str(self.install_target_path)))
+                result = subprocess.run((str(Path(self.temp_path, "install-requirements.bat")), str(self.install_target_path)))
                 assert result.returncode == 0
             except AssertionError:
                 raise OSError
