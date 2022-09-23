@@ -1,7 +1,8 @@
 /catdvhtmldisplay.log
 /catdvimporter.log
 /logo.png
-/latest.log
+/source/_latest.log
 /fcpxml_examples/
 /json_clips/
 /logo/
+*.env

@@ -1,0 +1,1 @@
+python -m nuitka --onefile --follow-imports --enable-plugin=pyside6 --windows-uac-admin --onefile-tempdir-spec=%TEMP%\\CatDVResolve_%PID% --include-data-files=.\install.bat=install.bat --include-data-files=.\requirements.txt=requirements.txt --include-data-dir=.\source=source --output-dir=.\build .\installer\catdv-resolve_installer.py
