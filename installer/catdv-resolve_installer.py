@@ -366,11 +366,11 @@ class CatDVInstaller:
             raise AttributeError
 
         copy_from = self.get_packaged_files_location()
-        copy(Path(copy_from, "requirements.txt"), self.temp_path)
+        copy(Path(copy_from, "install-requirements.txt"), self.temp_path)
 
         if self.system_platform == self.Platform.Linux or self.system_platform == self.Platform.OSX:
             try:
-                result = subprocess.run(f"cd {str(self.install_target_path)} && source ./venv/bin/activate && pip install -r ./temp/requirements.txt", shell=True)
+                result = subprocess.run(f"cd {str(self.install_target_path)} && source ./venv/bin/activate && pip install -r ./temp/install-requirements.txt", shell=True)
                 assert result.returncode == 0
             except AssertionError:
                 raise OSError
