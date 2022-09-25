@@ -44,7 +44,6 @@ def get_resolve_pe_version_data(pe: pefile.PE):
 
 
 def get_resolve_exe_version_data(filepath: str):
-    print(filepath)
     pe = pefile.PE(filepath, fast_load=True)
     pe.parse_data_directories(directories=[pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
     return get_resolve_pe_version_data(pe)
@@ -55,8 +54,6 @@ def main():
     if not version_data:
         return
 
-    print(version_data)
-
     version = version_data["ProductVersion"]
 
     major_version_number = int(version[:version.index(".")])
@@ -64,7 +61,6 @@ def main():
         download_url = "https://www.python.org/downloads/release/python-3107/"
     else:
         download_url = "https://www.python.org/downloads/release/python-368/"
-    print(download_url)
 
 
 if __name__ == "__main__":
