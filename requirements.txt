@@ -1,4 +1,6 @@
+future==0.18.2
 Nuitka==1.0.8
+pefile==2022.5.30
 PySide6==6.3.2
 PySide6-Addons==6.3.2
 PySide6-Essentials==6.3.2
