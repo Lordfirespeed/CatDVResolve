@@ -46,7 +46,13 @@ def get_resolve_pe_version_data(pe: pefile.PE):
 def get_resolve_exe_version_data(filepath: str):
     pe = pefile.PE(filepath, fast_load=True)
     pe.parse_data_directories(directories=[pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
-    return get_resolve_pe_version_data(pe)
+    data = get_resolve_pe_version_data(pe)
+    try:
+        assert data["ProductName"] == "DaVinci Resolve"
+        assert data["CompanyName"] == "Blackmagic Design Pty. Ltd."
+    except (KeyError, AssertionError):
+        raise OSError
+    return data
 
 
 def main():
