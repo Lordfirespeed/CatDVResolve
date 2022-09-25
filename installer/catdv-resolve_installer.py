@@ -159,8 +159,8 @@ class CatDVInstaller:
         if self.system_platform != self.Platform.Linux:
             raise OSError
 
-        opt_path = Path("opt", "resolve").resolve()
-        home_path = Path("home", "resolve").resolve()
+        opt_path = Path("/", "opt", "resolve").resolve()
+        home_path = Path("/", "home", "resolve").resolve()
 
         if home_path.is_dir():
             return home_path
@@ -179,7 +179,7 @@ class CatDVInstaller:
         if self.system_platform == self.Platform.OSX:
             return Path("Applications", "DaVinci Resolve", "DaVinci Resolve.app")
         elif self.system_platform == self.Platform.Linux:
-            return Path(self.get_linux_resolve_dir(), "bin", "resolve")  # Total guess. need to test
+            return Path(self.get_linux_resolve_dir(), "bin", "resolve")
         elif self.system_platform == self.Platform.Windows:
             from os import getenv as osgetenv
             program_files = osgetenv("PROGRAMFILES")
@@ -199,12 +199,6 @@ class CatDVInstaller:
         try:
             self.resolve_version_data = self.get_resolve_executable_version_data(app_path)
         except OSError:
-            return
-
-        try:
-            assert self.resolve_version_data["ProductName"] == "DaVinci Resolve"
-            assert self.resolve_version_data["CompanyName"] == "Blackmagic Design Pty. Ltd."
-        except (KeyError, AssertionError):
             return
 
         self.resolve_app_path = app_path
@@ -239,7 +233,8 @@ class CatDVInstaller:
         if self.system_platform == self.Platform.OSX:
             return {}
         elif self.system_platform == self.Platform.Linux:
-            return {}
+            from linux_query_version import get_resolve_executable_path_version
+            return {"ProductVersion": get_resolve_executable_path_version(app_path)}
         elif self.system_platform == self.Platform.Windows:
             from get_exe_version import get_resolve_exe_version_data
             return get_resolve_exe_version_data(str(app_path))
@@ -318,7 +313,8 @@ class CatDVInstaller:
         try:
             required_version_path_str = self.get_required_python_executable_path_str()
             assert required_version_path_str is not None
-        except (OSError, AssertionError):
+        except (OSError, AssertionError) as e:
+            logging.exception(e)
             return
 
         self.python_executable_path_str = required_version_path_str
@@ -327,7 +323,7 @@ class CatDVInstaller:
         if self.system_platform == self.Platform.OSX:
             return Path("Library", "Application Support", "Square Box", "CatDV-Resolve")
         elif self.system_platform == self.Platform.Linux:
-            raise NotImplementedError  # needs to be replaced
+            return Path("/", "opt", "catdv-resolve")
         elif self.system_platform == self.Platform.Windows:
             from os import getenv as osgetenv
             return Path(osgetenv("PROGRAMFILES"), "Square Box", "CatDV-Resolve")
@@ -339,13 +335,13 @@ class CatDVInstaller:
 
     @cache
     def get_packaged_files_location(self) -> Path:
+        if sys.argv[0].endswith("py"):
+            return Path(__file__).resolve().parent.parent
         if self.system_platform == self.Platform.OSX:
             raise NotImplementedError
         elif self.system_platform == self.Platform.Linux:
             raise NotImplementedError
         elif self.system_platform == self.Platform.Windows:
-            if not sys.argv[0].endswith("exe"):
-                return Path(r"C:\Users\joe\AppData\Local\CatDVResolve")
             from os import getenv as osgetenv, getpid as osgetpid, getppid as osgetppid
             return Path(osgetenv("TEMP"), f"CatDVResolve_{osgetppid()}")
         else:
@@ -620,7 +616,10 @@ class CatDVWizard(QWizard):
     class DownloadPythonPage(PageWithText):
         page_id = 200
         subtitle = "Python Couldn't be Found"
-        content = "Your Python installation could not be found."
+        content = "Your Python installation could not be found. Download python from BLAH"
+
+        def nextId(self) -> int:
+            return CatDVWizard.LookForPythonAgainPage.page_id
 
     class CommitToInstallPage(PageWithText):
         page_id = 3
