@@ -251,7 +251,7 @@ class CatDVInstaller:
         elif self.system_platform == self.Platform.Linux:
             try:
                 find_result = subprocess.run(
-                    ("usr/bin/find", "/usr/bin", "/usr/local/bin", "-name", "python*", "!", "-type", "l"),
+                    ("/usr/bin/find", "/usr/bin", "/usr/local/bin", "-name", "python*", "!", "-type", "l"),
                     capture_output=True)
                 assert find_result.returncode == 0
             except FileNotFoundError as e:
