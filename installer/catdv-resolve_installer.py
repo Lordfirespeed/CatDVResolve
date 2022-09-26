@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Callable, ClassVar, Any, Protocol
+from typing import Optional, Callable, ClassVar, Protocol
 import sys
 from dataclasses import dataclass, field
 from enum import Enum
@@ -319,7 +319,7 @@ class CatDVInstaller:
 
         self.python_executable_path_str = required_version_path_str
 
-    def get_default_install_target_systemwide(self) -> Path:
+    def get_default_install_target(self) -> Path:
         if self.system_platform == self.Platform.OSX:
             return Path("Library", "Application Support", "Square Box", "CatDV-Resolve")
         elif self.system_platform == self.Platform.Linux:
@@ -337,13 +337,16 @@ class CatDVInstaller:
     def get_packaged_files_location(self) -> Path:
         if sys.argv[0].endswith("py"):
             return Path(__file__).resolve().parent.parent
+
+        from os import getenv as osgetenv, getppid as osgetppid
+        dirname = f"CatDVResolve_{osgetppid()}"
+
         if self.system_platform == self.Platform.OSX:
             raise NotImplementedError
         elif self.system_platform == self.Platform.Linux:
-            raise NotImplementedError
+            return Path("/", "tmp", dirname)
         elif self.system_platform == self.Platform.Windows:
-            from os import getenv as osgetenv, getpid as osgetpid, getppid as osgetppid
-            return Path(osgetenv("TEMP"), f"CatDVResolve_{osgetppid()}")
+            return Path(osgetenv("TEMP"), dirname)
         else:
             raise NotImplementedError
 
@@ -366,7 +369,7 @@ class CatDVInstaller:
 
         if self.system_platform == self.Platform.Linux or self.system_platform == self.Platform.OSX:
             try:
-                result = subprocess.run(f"cd {str(self.install_target_path)} && source ./venv/bin/activate && pip install -r ./temp/install-requirements.txt", shell=True)
+                result = subprocess.run(f"cd {str(self.install_target_path)} && . ./venv/bin/activate && pip install -r {str(Path(self.temp_path, 'install-requirements.txt'))}", shell=True)
                 assert result.returncode == 0
             except AssertionError:
                 raise OSError
@@ -394,6 +397,7 @@ class CatDVInstaller:
         from os import symlink as ossymlink
 
         symlink_destination = Path(self.get_resolve_system_scripts_directory(), "Utility", "CatDV-Resolve.py")
+        symlink_destination.parent.mkdir(parents=True, exist_ok=True)
         symlink_destination.unlink(missing_ok=True)
 
         ossymlink(Path(self.install_target_path, "source", "bootstrap.py"), symlink_destination)
@@ -409,7 +413,12 @@ class CatDVInstaller:
         self.succeeded = True
 
     def _execute(self):
+        try:
+            self.install_target_path.rmdir()
+        except (FileNotFoundError, OSError):
+            pass
         self.install_target_path.mkdir(parents=True, exist_ok=False)  # raises FileExistsError
+
         self.venv_path = Path(self.install_target_path, "venv")
         self.temp_path = Path(self.install_target_path, "Temp")
         self.create_venv()
@@ -470,23 +479,27 @@ class CatDVWizard(QWizard):
         self.setWindowTitle("Install CatDV-Resolve")
         self.setButtonText(self.CommitButton, self.button(self.NextButton).text())
 
-        for page in self.pages:
-            self.setPage(page.page_id, page())
+        for page in CatDVWizardPages:
+            self.setPage(page.value, self.__getattribute__(page.name + "Page")())
 
         self.setStartId(0)
 
         self.show()
 
     class IntroductionPage(PageWithText):
-        page_id = 0
         subtitle = "Introduction"
         content = "This wizard will help you to install the CatDV-Resolve panel client."
 
         def nextId(self) -> int:
-            return 1
+            return CatDVWizardPages.LookForResolve.value
+
+    class CheckPrivilegesPage(CatDVWizardPage):
+        pass
+
+    class UserNeedsRootPage(CatDVWizardPage):
+        pass
 
     class LookForResolvePage(CatDVWizardPage):
-        page_id = 1
 
         def initializePage(self) -> None:
             super().initializePage()
@@ -495,9 +508,9 @@ class CatDVWizard(QWizard):
 
         def nextId(self) -> int:
             if self.wizard().installer.resolve_app_path is not None:
-                return CatDVWizard.LookForPythonPage.page_id
+                return CatDVWizardPages.LookForPython.value
             else:
-                return CatDVWizard.AskAboutResolvePage.page_id
+                return CatDVWizardPages.AskAboutResolve.value
 
         def check_entered_path(self):
             entered_path_string = self.field("ExecutablePath")
@@ -524,16 +537,14 @@ class CatDVWizard(QWizard):
                 pass
 
     class LookForResolveAgainPage(LookForResolvePage):
-        page_id = 6
 
         def nextId(self) -> int:
             if self.wizard().installer.resolve_app_path is not None:
-                return CatDVWizard.LookForPythonPage.page_id
+                return CatDVWizardPages.LookForPython.value
             else:
-                return CatDVWizard.RestartPage.page_id
+                return CatDVWizardPages.Restart.value
 
     class AskAboutResolvePage(PageWithText):
-        page_id = 100
         subtitle = "DaVinci Resolve"
         content = "Your DaVinci Resolve installation could not be found. Is DaVinci Resolve installed?"
 
@@ -549,12 +560,11 @@ class CatDVWizard(QWizard):
 
         def nextId(self) -> int:
             if self.field("UserSaysResolveIsInstalled") is True:
-                return CatDVWizard.SelectResolveExecutablePage.page_id
+                return CatDVWizardPages.SelectResolveExecutable.value
             else:
-                return CatDVWizard.DownloadResolvePage.page_id
+                return CatDVWizardPages.DownloadResolve.value
 
     class SelectResolveExecutablePage(PageWithText):
-        page_id = 110
         subtitle = "DaVinci Resolve"
         content = "Select your DaVinci Resolve app executable."
 
@@ -577,18 +587,16 @@ class CatDVWizard(QWizard):
             self.completeChanged.emit()
 
         def nextId(self) -> int:
-            return CatDVWizard.LookForResolveAgainPage.page_id
+            return CatDVWizardPages.LookForResolveAgain.value
 
     class DownloadResolvePage(PageWithText):
-        page_id = 120
         subtitle = "DaVinci Resolve"
         content = "You can download DaVinci Resolve <a href=\"https://www.blackmagicdesign.com/products/davinciresolve/\">from Blackmagic Design's website<a>."
 
         def nextId(self) -> int:
-            return CatDVWizard.LookForResolveAgainPage.page_id
+            return CatDVWizardPages.LookForResolveAgain.value
 
     class LookForPythonPage(CatDVWizardPage):
-        page_id = 2
 
         def __init__(self):
             super().__init__()
@@ -600,36 +608,33 @@ class CatDVWizard(QWizard):
 
         def nextId(self) -> int:
             if self.wizard().installer.python_executable_path_str is not None:
-                return CatDVWizard.CommitToInstallPage.page_id
+                return CatDVWizardPages.CommitToInstall.value
             else:
-                return CatDVWizard.DownloadPythonPage.page_id
+                return CatDVWizardPages.DownloadPython.value
 
     class LookForPythonAgainPage(LookForPythonPage):
-        page_id = 7
 
         def nextId(self) -> int:
             if self.wizard().installer.python_executable_path_str is not None:
-                return CatDVWizard.CommitToInstallPage.page_id
+                return CatDVWizardPages.CommitToInstall.value
             else:
-                return CatDVWizard.RestartPage.page_id
+                return CatDVWizardPages.Restart.value
 
     class DownloadPythonPage(PageWithText):
-        page_id = 200
         subtitle = "Python Couldn't be Found"
         content = "Your Python installation could not be found. Download python from BLAH"
 
         def nextId(self) -> int:
-            return CatDVWizard.LookForPythonAgainPage.page_id
+            return CatDVWizardPages.LookForPythonAgain.value
 
     class CommitToInstallPage(PageWithText):
-        page_id = 3
         subtitle = "Install"
         content = "You are about to install the CatDV-Resolve panel client."
 
         def __init__(self):
             super().__init__()
             self.target_file_selector = FileSelector("Install Target:",
-                                                     str(CatDVWizard.installer.get_default_install_target_systemwide()),
+                                                     str(CatDVWizard.installer.get_default_install_target()),
                                                      mode=QFileDialog.getExistingDirectory)
 
             self.registerField("InstallTargetDirectory", self.target_file_selector.path_text_entry)
@@ -637,7 +642,7 @@ class CatDVWizard(QWizard):
             self.layout().addWidget(self.target_file_selector)
 
         def nextId(self) -> int:
-            return CatDVWizard.ConsoleDuringInstallPage.page_id
+            return CatDVWizardPages.ConsoleDuringInstall.value
 
     class InstallThread(QThread):
         def __init__(self, wizard: CatDVWizard, parent=None) -> None:
@@ -648,7 +653,6 @@ class CatDVWizard(QWizard):
             self.wizard.installer.execute()
 
     class ConsoleDuringInstallPage(CatDVWizardPage):
-        page_id = 4
 
         def __init__(self):
             super().__init__()
@@ -670,12 +674,11 @@ class CatDVWizard(QWizard):
 
         def nextId(self) -> int:
             if self.wizard().installer.succeeded:
-                return CatDVWizard.ConclusionPage.page_id
+                return CatDVWizardPages.Conclusion.value
             else:
-                return CatDVWizard.FailedPage.page_id
+                return CatDVWizardPages.Failed.value
 
     class ConclusionPage(PageWithText):
-        page_id = 5
         subtitle = "Conclusion"
         content = "The CatDV-Resolve panel client has been successfully installed."
 
@@ -683,7 +686,6 @@ class CatDVWizard(QWizard):
             return -1
 
     class FailedPage(PageWithText):
-        page_id = 8
         subtitle = "Failure"
         content = "The CatDV-Resolve panel client could not be installed."
 
@@ -691,26 +693,28 @@ class CatDVWizard(QWizard):
             return -1
 
     class RestartPage(CatDVWizardPage):
-        page_id = 10
 
         def initializePage(self) -> None:
             self.wizard().restart()
 
-    pages = {
-        IntroductionPage,
-        LookForResolvePage,
-        AskAboutResolvePage,
-        SelectResolveExecutablePage,
-        DownloadResolvePage,
-        LookForResolveAgainPage,
-        LookForPythonPage,
-        DownloadPythonPage,
-        CommitToInstallPage,
-        ConsoleDuringInstallPage,
-        ConclusionPage,
-        FailedPage,
-        RestartPage
-    }
+
+class CatDVWizardPages(Enum):
+    Introduction = 0
+    LookForResolve = 1
+    AskAboutResolve = 2
+    SelectResolveExecutable= 3
+    DownloadResolve = 4
+    LookForResolveAgain = 5
+    LookForPython = 6
+    DownloadPython = 7
+    LookForPythonAgain = 8
+    CommitToInstall = 9
+    ConsoleDuringInstall = 10
+    Conclusion = 11
+    Failed = 12
+    Restart = 13
+    CheckPrivileges = 14
+    UserNeedsRoot = 15
 
 
 if __name__ == "__main__":
