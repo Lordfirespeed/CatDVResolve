@@ -11,7 +11,8 @@ from functools import cache
 from PySide6.QtCore import Slot, Qt, QThread
 from PySide6.QtWidgets import QWidget, QApplication, \
     QLabel, QWizard, QWizardPage, QFrame, QBoxLayout, \
-    QGridLayout, QLineEdit, QFileDialog, QPushButton, QCheckBox
+    QGridLayout, QLineEdit, QFileDialog, QPushButton, QCheckBox, \
+    QDialog
 
 
 @dataclass
@@ -109,7 +110,8 @@ class FileSelector(QFrame):
 
 class CatDVInstaller:
     __slots__ = ["system_platform", "resolve_data_dir", "resolve_app_path", "resolve_version_data",
-                 "python_executable_path_str", "install_target_path", "venv_path", "temp_path", "succeeded"]
+                 "python_executable_path_str", "install_target_path", "venv_path", "temp_path", "succeeded",
+                 "is_privileged"]
 
     class Platform(Enum):
         Unknown = 0
@@ -141,6 +143,34 @@ class CatDVInstaller:
         self.venv_path: Optional[Path] = None
         self.temp_path: Optional[Path] = None
         self.succeeded: Optional[bool] = None
+        self.is_privileged: Optional[bool] = None
+
+    def _get_privilege_status(self) -> bool:
+        if self.system_platform == self.Platform.OSX:
+            raise NotImplementedError
+        elif self.system_platform == self.Platform.Linux:
+            from uuid import uuid4
+            test_path = Path("/", "opt", f"catdv-resolve-privilege-test-{str(uuid4())}")
+            try:
+                test_path.mkdir(exist_ok=False)
+                test_path.rmdir()
+            except PermissionError:
+                return False
+            return True
+        elif self.system_platform == self.Platform.Windows:
+            from ctypes import windll
+            return windll.shell32.IsUserAnAdmin()
+        else:
+            raise NotImplementedError
+
+    def check_privilege(self):
+        self.is_privileged = self._get_privilege_status()
+
+        if self.is_privileged:
+            return
+
+        if self.system_platform == self.Platform.Windows:
+            self.request_admin_escalation_or_exit()
 
     def request_admin_escalation_or_exit(self):
         if self.system_platform != self.Platform.Windows:
@@ -473,7 +503,11 @@ class CatDVWizard(QWizard):
     def __init__(self, *args, **kwargs):
         super(CatDVWizard, self).__init__(*args, **kwargs)
 
-        self.installer.request_admin_escalation_or_exit()
+        self.installer.check_privilege()
+        if not self.installer.is_privileged:
+            dialog = self.ErrorDialog("Insufficient Permissions", "Please restart the installer with elevated priveleges.\nOn Windows and MacOS, right click file -> Run as Admin / Run.\nOn Linux, execute the installer using sudo.")
+            dialog.exec_()
+            return
 
         self.setOption(self.IndependentPages, False)
         self.setWindowTitle("Install CatDV-Resolve")
@@ -486,18 +520,25 @@ class CatDVWizard(QWizard):
 
         self.show()
 
+    class ErrorDialog(QDialog):
+        def __init__(self, title: str, message: str):
+            super().__init__()
+            self.setWindowTitle(title)
+            self.setModal(True)
+            self.setLayout(QBoxLayout(QBoxLayout.TopToBottom))
+            self.layout().addWidget(QLabel(text=message))
+            self.finished.connect(self.exit)
+
+        @Slot()
+        def exit(self):
+            sys.exit()
+
     class IntroductionPage(PageWithText):
         subtitle = "Introduction"
         content = "This wizard will help you to install the CatDV-Resolve panel client."
 
         def nextId(self) -> int:
             return CatDVWizardPages.LookForResolve.value
-
-    class CheckPrivilegesPage(CatDVWizardPage):
-        pass
-
-    class UserNeedsRootPage(CatDVWizardPage):
-        pass
 
     class LookForResolvePage(CatDVWizardPage):
 
@@ -713,8 +754,6 @@ class CatDVWizardPages(Enum):
     Conclusion = 11
     Failed = 12
     Restart = 13
-    CheckPrivileges = 14
-    UserNeedsRoot = 15
 
 
 if __name__ == "__main__":
