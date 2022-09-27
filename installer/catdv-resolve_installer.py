@@ -506,7 +506,7 @@ class CatDVWizard(QWizard):
         self.installer.check_privilege()
         if not self.installer.is_privileged:
             dialog = self.ErrorDialog("Insufficient Permissions", "Please restart the installer with elevated priveleges.\nOn Windows and MacOS, right click file -> Run as Admin / Run.\nOn Linux, execute the installer using sudo.")
-            dialog.exec_()
+            dialog.exec()
             return
 
         self.setOption(self.IndependentPages, False)
