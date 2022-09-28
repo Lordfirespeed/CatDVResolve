@@ -7,49 +7,49 @@ This file bootstraps the CatDV Importer source for DaVinci Resolve.
 import sys
 import os
 import logging
+from pathlib import Path
 
 # as the script is running from the workspace -> scripts context menu,
 # the "resolve" (resolve) and "fu" (fusion) global modules are passed into the script
 # and therefore the DaVinciResolveScript does not need to be imported.
 
 if sys.platform.startswith("darwin"):
-    appDataDirectory = os.path.join(os.getenv("HOME"), "Library", "Application Support")
+    appPath = Path("/", "Library", "Application Support", "Square Box", "CatDV-Resolve")
 elif sys.platform.startswith("win") or sys.platform.startswith("cygwin"):
-    appDataDirectory = os.getenv('LOCALAPPDATA')
+    appPath = Path(os.getenv('PROGRAMFILES'), "CatDV-Resolve")
 elif sys.platform.startswith("linux"):
-    try:
-        appDataDirectory = os.getenv("XDG_DATA_HOME")
-        assert appDataDirectory is not None
-    except AssertionError:
-        logging.info("'XDG_DATA_HOME' environment variable is not available, using ~/.local/share/ as appdata directory.")
-        appDataDirectory = os.path.join(os.getenv("HOME"), ".local", "share")
+    appPath = Path("/", "opt", "catdv-resolve")
+    # appPath = Path("/", "home", "joeclack", "PycharmProjects", "CatDVResolve")
 else:
     try:
-        appDataDirectory = os.getenv("LOCALAPPDATA")
-        assert appDataDirectory is not None
+        appPath = os.getenv("CATDVRESOLVEAPP")
+        assert appPath is not None
     except AssertionError:
-        logging.critical("Unrecognised OS. Please set the 'LOCALAPPDATA' environment variable to your app data directory.")
+        logging.critical("Unrecognised OS. Please set the 'CATDVRESOLVEAPP' environment variable to your app data directory.")
         sys.exit()
 
 try:
-    assert appDataDirectory is not None
+    assert appPath is not None
 except AssertionError:
     logging.critical("Unable to find app data directory. Try reinstalling.")
     sys.exit()
 
-appPath = os.path.join(appDataDirectory, "CatDVResolve")
-
 
 def activate_virtual_environment(environment_root):
     """Configures the virtual environment starting at ``environment_root``."""
-    activate_script = os.path.join(environment_root, 'Scripts', 'activate_this.py')
+    if sys.platform.startswith("win"):
+        activate_script = Path(environment_root, 'Scripts', 'activate_this.py')
+    else:
+        activate_script = Path(environment_root, "bin", "activate_this.py")
+
     with open(activate_script) as activate_script_file:
         activate_script_code = compile(activate_script_file.read(), activate_script, "exec")
         exec(activate_script_code, {"__file__": activate_script})
 
 
-activate_virtual_environment(os.path.join(appPath, "venv3.10"))
-sys.path.insert(0, appPath)
+activate_virtual_environment(os.path.join(appPath, "venv"))
+sys.path.insert(0, str(appPath))
+print(sys.path)
 
 from source.main import main
 
