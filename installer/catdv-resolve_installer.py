@@ -505,6 +505,7 @@ class CatDVInstaller:
         except (FileNotFoundError, OSError):
             pass
         self.install_target_path.mkdir(parents=True, exist_ok=False)  # raises FileExistsError
+        self._allow_read_and_execute(self.install_target_path)
 
         self.venv_path = Path(self.install_target_path, "venv")
         self.temp_path = Path(self.install_target_path, "temp")
