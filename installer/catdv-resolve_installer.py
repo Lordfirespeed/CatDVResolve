@@ -351,7 +351,7 @@ class CatDVInstaller:
 
     def get_default_install_target(self) -> Path:
         if self.system_platform == self.Platform.OSX:
-            return Path("Library", "Application Support", "Square Box", "CatDV-Resolve")
+            return Path("/", "Library", "Application Support", "Square Box", "CatDV-Resolve")
         elif self.system_platform == self.Platform.Linux:
             return Path("/", "opt", "catdv-resolve")
         elif self.system_platform == self.Platform.Windows:
@@ -390,21 +390,66 @@ class CatDVInstaller:
         except AssertionError:
             raise OSError
 
+    def _allow_read_and_execute(self, path: Path) -> None:
+        if self.system_platform == self.Platform.Windows:
+            return
+        if self.system_platform == self.Platform.Unknown:
+            raise NotImplementedError
+
+        try:
+            result = subprocess.run(("chmod", "a+rx", "-R", str(path)))
+            assert result.returncode == 0
+        except AssertionError:
+            raise OSError
+
+        try:
+            result = subprocess.run(("chmod", "a+rwx", str(path)))
+            assert result.returncode == 0
+        except AssertionError:
+            raise OSError
+
+    def _copy_tree_and_set_permissions(self, source: Path, destination: Path) -> None:
+        if not (isinstance(source, Path) and isinstance(destination, Path)):
+            raise TypeError
+
+        copytree(source, destination, dirs_exist_ok=True)
+        self._allow_read_and_execute(destination)
+
+    def copy_temp(self) -> None:
+        copy_from = Path(self.get_packaged_files_location(), "temp")
+        copy_to = Path(self.install_target_path, "temp")
+        self._copy_tree_and_set_permissions(copy_from, copy_to)
+
+    def add_activate_this_to_venv(self) -> None:
+        if self.venv_path is None or self.temp_path is None:
+            raise AttributeError
+
+        if self.system_platform == self.Platform.OSX or self.system_platform == self.Platform.Linux:
+            copy_to = Path(self.venv_path, "bin")
+        elif self.system_platform == self.Platform.Windows:
+            copy_to = Path(self.venv_path, "Scripts")
+        else:
+            raise NotImplementedError
+
+        copy_to = Path(copy_to, "activate_this.py")
+
+        copy(Path(self.temp_path, "activate_this.py"), copy_to)
+        self._allow_read_and_execute(copy_to)
+
     def install_dependencies_to_venv(self) -> None:
         if self.venv_path is None or self.temp_path is None:
             raise AttributeError
 
-        copy_from = self.get_packaged_files_location()
-        copy(Path(copy_from, "install-requirements.txt"), self.temp_path)
+        copy_from = Path(self.get_packaged_files_location(), "temp")
+        copytree(copy_from, self.temp_path, dirs_exist_ok=True)
 
         if self.system_platform == self.Platform.Linux or self.system_platform == self.Platform.OSX:
             try:
-                result = subprocess.run(f"cd {str(self.install_target_path)} && . ./venv/bin/activate && pip install -r {str(Path(self.temp_path, 'install-requirements.txt'))}", shell=True)
+                result = subprocess.run(f"cd {str(self.install_target_path)} && . ./venv/bin/activate && pip install -r {str(Path(self.temp_path, 'unix-requirements.txt'))}", shell=True)
                 assert result.returncode == 0
             except AssertionError:
                 raise OSError
         elif self.system_platform == self.Platform.Windows:
-            copy(Path(copy_from, "install-requirements.bat"), self.temp_path)
             try:
                 result = subprocess.run((str(Path(self.temp_path, "install-requirements.bat")), str(self.install_target_path)))
                 assert result.returncode == 0
@@ -413,12 +458,24 @@ class CatDVInstaller:
         else:
             raise NotImplementedError
 
-    def copy_source(self) -> None:
-        if self.install_target_path is None:
-            raise AttributeError
+    def install_platform_dependencies(self):
+        if self.system_platform == self.Platform.OSX:
+            raise NotImplementedError
+        elif self.system_platform == self.Platform.Linux:
+            try:
+                result = subprocess.run(("apt", "install", "python3-gi", "python3-gi-cairo", "gir1.2-gtk-3.0", "gir1.2-webkit2-4.0"))
+                assert result.returncode == 0
+            except AssertionError:
+                raise OSError
+        elif self.system_platform == self.Platform.Windows:
+            pass
+        else:
+            raise NotImplementedError
 
-        copy_from = self.get_packaged_files_location()
-        copytree(Path(copy_from, "source"), Path(self.install_target_path, "source"))
+    def copy_source(self) -> None:
+        copy_from = Path(self.get_packaged_files_location(), "source")
+        copy_to = Path(self.install_target_path, "source")
+        self._copy_tree_and_set_permissions(copy_from, copy_to)
 
     def create_bootstrap_symlink(self):
         if self.install_target_path is None:
@@ -450,10 +507,13 @@ class CatDVInstaller:
         self.install_target_path.mkdir(parents=True, exist_ok=False)  # raises FileExistsError
 
         self.venv_path = Path(self.install_target_path, "venv")
-        self.temp_path = Path(self.install_target_path, "Temp")
+        self.temp_path = Path(self.install_target_path, "temp")
         self.create_venv()
         self.temp_path.mkdir(exist_ok=True)
+        self.copy_temp()
+        self.add_activate_this_to_venv()
         self.install_dependencies_to_venv()
+        self.install_platform_dependencies()
         self.copy_source()
         rmtree(self.temp_path)
         self.create_bootstrap_symlink()
