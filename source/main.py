@@ -14,7 +14,7 @@ def main(resolve):
     app_path = get_app_directory()
     os.chdir(app_path)
 
-    log_file_path = os.path.join(app_path, "_latest.log")
+    log_file_path = Path(app_path, "_latest.log")
     logging.basicConfig(level=logging.DEBUG, filename=log_file_path, filemode="w", format="%(levelname)s %(asctime)s - %(message)s")
 
     logging.info('Python %s on %s' % (sys.version, sys.platform))
