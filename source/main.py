@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def get_app_directory():
-    return Path(__file__).resolve().parent
+    return Path(__file__).resolve().parent.parent
 
 
 def main(resolve):
