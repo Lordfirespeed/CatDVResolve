@@ -88,11 +88,13 @@ def main_build():
     installer_command.add_option(CommandOption("onefile"))
     installer_command.add_option(CommandOption("follow-imports"))
     installer_command.add_option(KeyValueCommandOption("enable-plugin", "pyside6"))
+
     installer_command.add_option(CommandOption("windows-uac-admin"))
     installer_command.add_option(PathCommandOption("onefile-tempdir-spec", Path("%TEMP%", "CatDVResolve_%PID%")))
-    installer_command.add_data_files(Path(".", "install-requirements.txt"), Path("install-requirements.txt"))
-    installer_command.add_data_files(Path(".", "install-requirements.bat"), Path("install-requirements.bat"))
+
+    installer_command.add_data_dir(Path(".", "installer", "temp"), Path("temp"))
     installer_command.add_data_dir(Path(".", "source"), Path("source"))
+
     installer_command.add_option(PathCommandOption("output-dir", Path(".", "build").resolve()))
 
     process = subprocess.Popen(installer_command.construct_args())
