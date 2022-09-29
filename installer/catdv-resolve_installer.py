@@ -4,21 +4,19 @@ import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-import subprocess
 import logging
 from shutil import copy, copytree, rmtree
 from functools import cache
-from PySide6.QtCore import Slot, Qt, QThread
+from PySide6.QtCore import Slot, Qt, QThread, Signal, QProcess, QObject, QByteArray
 from PySide6.QtWidgets import QWidget, QApplication, \
     QLabel, QWizard, QWizardPage, QFrame, QBoxLayout, \
     QGridLayout, QLineEdit, QFileDialog, QPushButton, QCheckBox, \
-    QDialog
+    QDialog, QTextEdit
 
 
 @dataclass
 class PythonVersion:
     """Class for keeping track of a Resolve-compatible python version."""
-
     major: int
     minor: int
     patch: Optional[int] = None  # "None" represents any patch no. allowed
@@ -111,7 +109,7 @@ class FileSelector(QFrame):
 class CatDVInstaller:
     __slots__ = ["system_platform", "resolve_data_dir", "resolve_app_path", "resolve_version_data",
                  "python_executable_path_str", "install_target_path", "venv_path", "temp_path", "succeeded",
-                 "is_privileged"]
+                 "is_privileged", "install_log_signal"]
 
     class Platform(Enum):
         Unknown = 0
@@ -132,6 +130,87 @@ class CatDVInstaller:
             else:
                 return cls.Unknown
 
+    class SignalLogger:
+        def __init__(self, signal: Optional[Signal]) -> None:
+            self.signal = signal
+            self.lines = []
+
+        def write(self, data: QByteArray) -> None:
+            data = data.toStdString()
+            if data == "":
+                return
+            self.lines.append(data)
+
+            if not isinstance(self.signal, Signal):
+                return
+            self.signal.emit(data)
+
+    class SynchronousProcess(QObject):
+        @dataclass(frozen=True)
+        class ProcessResult:
+            returncode: int
+            stdout: str
+            stderr: str
+
+        def __init__(self, program: str, arguments: [str], stdout=None, stderr=None) -> None:
+            super().__init__()
+            self.stdout = stdout
+            self.stderr = stderr
+
+            self.process = QProcess()
+            self.process.setProgram(program)
+            self.process.setArguments(arguments)
+
+            self.process.readyReadStandardOutput.connect(self.slot_do_read_stdout)
+            self.process.readyReadStandardError.connect(self.slot_do_read_stderr)
+
+        def do_read(self, logger):
+            line = self.process.readLine()
+            if logger is None:
+                return
+            logger.write(line)
+
+        @Slot()
+        def slot_do_read_stdout(self):
+            self.do_read_stdout()
+
+        @Slot()
+        def slot_do_read_stderr(self):
+            self.do_read_stderr()
+
+        def do_read_stdout(self):
+            self.process.setReadChannel(self.process.ProcessChannel.StandardOutput)
+            self.do_read(self.stdout)
+
+        def do_read_stderr(self):
+            self.process.setReadChannel(self.process.ProcessChannel.StandardError)
+            self.do_read(self.stderr)
+
+        def start(self):
+            self.process.start()
+            try:
+                assert self.process.waitForStarted()
+            except AssertionError:
+                raise OSError
+
+            try:
+                assert self.process.waitForFinished()
+            except AssertionError:
+                raise OSError
+
+            self.do_read_stdout()
+            self.do_read_stderr()
+
+            return self.ProcessResult(self.process.exitCode(),
+                                      "".join(self.stdout.lines),
+                                      "".join(self.stderr.lines))
+
+    def do_synchronous_process(self, program: str, arguments: [str]) -> SynchronousProcess.ProcessResult:
+        stdout_logger = self.SignalLogger(self.install_log_signal)
+        stderr_logger = self.SignalLogger(self.install_log_signal)
+        synch_process = self.SynchronousProcess(program, arguments, stdout_logger, stderr_logger)
+        return synch_process.start()
+
     def __init__(self):
         self.system_platform = self.Platform.determine()
 
@@ -144,6 +223,7 @@ class CatDVInstaller:
         self.temp_path: Optional[Path] = None
         self.succeeded: Optional[bool] = None
         self.is_privileged: Optional[bool] = None
+        self.install_log_signal: Optional[Signal] = None
 
     def _get_privilege_status(self) -> bool:
         if self.system_platform == self.Platform.OSX:
@@ -272,17 +352,15 @@ class CatDVInstaller:
             raise NotImplementedError
 
     @staticmethod
-    def strip_encoded_stdout_lines(stdout_str: bytes) -> [str]:
-        return [line.strip() for line in stdout_str.decode("utf-8", "backslashreplace").strip().split("\n")]
+    def split_stdout_lines(stdout_str: str) -> [str]:
+        return [line.strip() for line in stdout_str.strip().split("\n")]
 
     def get_python_executable_path_strs(self) -> [str]:
         if self.system_platform == self.Platform.OSX:
             return []
         elif self.system_platform == self.Platform.Linux:
             try:
-                find_result = subprocess.run(
-                    ("/usr/bin/find", "/usr/bin", "/usr/local/bin", "-name", "python*", "!", "-type", "l"),
-                    capture_output=True)
+                find_result = self.do_synchronous_process("/usr/bin/find", ("/usr/bin", "/usr/local/bin", "-name", "python*", "!", "-type", "l"))
                 assert find_result.returncode == 0
             except FileNotFoundError as e:
                 print("Couldn't find the find command. Install it to /usr/bin/find")
@@ -290,15 +368,15 @@ class CatDVInstaller:
             except AssertionError:
                 return []
 
-            return self.strip_encoded_stdout_lines(find_result.stdout)
+            return self.split_stdout_lines(find_result.stdout)
         elif self.system_platform == self.Platform.Windows:
             try:
-                where_result = subprocess.run(("where", "python"), capture_output=True)
+                where_result = self.do_synchronous_process("where", ("python",))
                 assert where_result.returncode == 0
             except AssertionError:
                 return []
 
-            return self.strip_encoded_stdout_lines(where_result.stdout)
+            return self.split_stdout_lines(where_result.stdout)
         else:
             raise NotImplementedError
 
@@ -320,17 +398,16 @@ class CatDVInstaller:
             raise AttributeError
 
     def get_python_executable_path_str_of_version(self, version: PythonVersion) -> str:
-        encoded_version = f"{version.major}.{version.minor}".encode("utf-8")
+        str_version = f"{version.major}.{version.minor}"
         for python_exe_path in self.get_python_executable_path_strs():
             try:
-                python_version_result = subprocess.run((python_exe_path, "-c", "import sys; print(sys.version)"),
-                                                       capture_output=True)
+                python_version_result = self.do_synchronous_process(python_exe_path, ("-c", "import sys; print(sys.version)"))
             except FileNotFoundError:
                 continue
             if python_version_result.returncode != 0:
                 continue
 
-            if python_version_result.stdout.startswith(encoded_version):
+            if python_version_result.stdout.startswith(str_version):
                 return python_exe_path
 
         raise OSError
@@ -381,11 +458,12 @@ class CatDVInstaller:
             raise NotImplementedError
 
     def create_venv(self) -> None:
+        self.install_log_signal.emit("Creating venv...")
         if self.venv_path is None:
             raise AttributeError
 
         try:
-            create_venv_result = subprocess.run((self.python_executable_path_str, "-m", "venv", str(self.venv_path)), capture_output=True)
+            create_venv_result = self.do_synchronous_process(self.python_executable_path_str, ("-m", "venv", str(self.venv_path)))
             assert create_venv_result.returncode == 0
         except AssertionError:
             raise OSError
@@ -397,13 +475,13 @@ class CatDVInstaller:
             raise NotImplementedError
 
         try:
-            result = subprocess.run(("chmod", "a+rx", "-R", str(path)))
+            result = self.do_synchronous_process("chmod", ("a+rx", "-R", str(path)))
             assert result.returncode == 0
         except AssertionError:
             raise OSError
 
         try:
-            result = subprocess.run(("chmod", "a+rwx", str(path)))
+            result = self.do_synchronous_process("chmod", ("a+rwx", str(path)))
             assert result.returncode == 0
         except AssertionError:
             raise OSError
@@ -416,11 +494,15 @@ class CatDVInstaller:
         self._allow_read_and_execute(destination)
 
     def copy_temp(self) -> None:
-        copy_from = Path(self.get_packaged_files_location(), "temp")
+        if sys.argv[0].endswith(".py"):
+            copy_from = Path(self.get_packaged_files_location(), "installer", "temp")
+        else:
+            copy_from = Path(self.get_packaged_files_location(), "temp")
         copy_to = Path(self.install_target_path, "temp")
         self._copy_tree_and_set_permissions(copy_from, copy_to)
 
     def add_activate_this_to_venv(self) -> None:
+        self.install_log_signal.emit("Injecting activate_this.py to venv...")
         if self.venv_path is None or self.temp_path is None:
             raise AttributeError
 
@@ -437,21 +519,19 @@ class CatDVInstaller:
         self._allow_read_and_execute(copy_to)
 
     def install_dependencies_to_venv(self) -> None:
+        self.install_log_signal.emit("Installing library dependencies to venv...")
         if self.venv_path is None or self.temp_path is None:
             raise AttributeError
 
-        copy_from = Path(self.get_packaged_files_location(), "temp")
-        copytree(copy_from, self.temp_path, dirs_exist_ok=True)
-
         if self.system_platform == self.Platform.Linux or self.system_platform == self.Platform.OSX:
             try:
-                result = subprocess.run(f"cd {str(self.install_target_path)} && . ./venv/bin/activate && pip install -r {str(Path(self.temp_path, 'unix-requirements.txt'))}", shell=True)
+                result = self.do_synchronous_process("/bin/bash", ("-c", f"cd {str(self.install_target_path)} && source ./venv/bin/activate && pip install -r {str(Path(self.temp_path, 'unix-requirements.txt'))}"))
                 assert result.returncode == 0
             except AssertionError:
                 raise OSError
         elif self.system_platform == self.Platform.Windows:
             try:
-                result = subprocess.run((str(Path(self.temp_path, "install-requirements.bat")), str(self.install_target_path)))
+                result = self.do_synchronous_process(str(Path(self.temp_path, "install-requirements.bat")), (str(self.install_target_path),))
                 assert result.returncode == 0
             except AssertionError:
                 raise OSError
@@ -459,11 +539,12 @@ class CatDVInstaller:
             raise NotImplementedError
 
     def install_platform_dependencies(self):
+        self.install_log_signal.emit("Installing platform dependencies...")
         if self.system_platform == self.Platform.OSX:
             raise NotImplementedError
         elif self.system_platform == self.Platform.Linux:
             try:
-                result = subprocess.run(("apt", "install", "python3-gi", "python3-gi-cairo", "gir1.2-gtk-3.0", "gir1.2-webkit2-4.0"))
+                result = self.do_synchronous_process("apt", ("install", "python3-gi", "python3-gi-cairo", "gir1.2-gtk-3.0", "gir1.2-webkit2-4.0"))
                 assert result.returncode == 0
             except AssertionError:
                 raise OSError
@@ -473,11 +554,13 @@ class CatDVInstaller:
             raise NotImplementedError
 
     def copy_source(self) -> None:
+        self.install_log_signal.emit("Unpackaging source...")
         copy_from = Path(self.get_packaged_files_location(), "source")
         copy_to = Path(self.install_target_path, "source")
         self._copy_tree_and_set_permissions(copy_from, copy_to)
 
     def create_bootstrap_symlink(self):
+        self.install_log_signal.emit("Creating bootstrap symlink...")
         if self.install_target_path is None:
             raise AttributeError
 
@@ -489,9 +572,9 @@ class CatDVInstaller:
 
         ossymlink(Path(self.install_target_path, "source", "bootstrap.py"), symlink_destination)
 
-    def execute(self):
+    def execute(self, log_signal: Signal) -> None:
         try:
-            self._execute()
+            self._execute(log_signal)
         except Exception as e:
             self.succeeded = False
             logging.exception(e)
@@ -499,7 +582,9 @@ class CatDVInstaller:
 
         self.succeeded = True
 
-    def _execute(self):
+    def _execute(self, log_signal: Signal) -> None:
+        self.install_log_signal = log_signal
+        self.install_log_signal.emit("Creating target directories...")
         try:
             self.install_target_path.rmdir()
         except (FileNotFoundError, OSError):
@@ -518,6 +603,7 @@ class CatDVInstaller:
         self.copy_source()
         rmtree(self.temp_path)
         self.create_bootstrap_symlink()
+        self.install_log_signal.emit("Installation complete.")
 
 
 class CatDVWizardPage(QWizardPage):
@@ -747,25 +833,40 @@ class CatDVWizard(QWizard):
             return CatDVWizardPages.ConsoleDuringInstall.value
 
     class InstallThread(QThread):
-        def __init__(self, wizard: CatDVWizard, parent=None) -> None:
+        def __init__(self, wizard: CatDVWizard, log_signal: Signal, parent=None) -> None:
             super().__init__(parent)
             self.wizard = wizard
+            self.log_signal = log_signal
 
         def run(self):
-            self.wizard.installer.execute()
+            self.wizard.installer.execute(self.log_signal)
 
     class ConsoleDuringInstallPage(CatDVWizardPage):
+        subtitle = "Installing..."
+        append_to_visible_log = Signal(str)
 
         def __init__(self):
             super().__init__()
             self.thread: Optional[QThread] = None
 
+            self.setLayout(QBoxLayout(QBoxLayout.TopToBottom))
+
+            self.install_log = QTextEdit()
+            self.install_log.setReadOnly(True)
+            self.layout().addWidget(self.install_log)
+
+            self.append_to_visible_log.connect(self._append_to_visible_log)
+
         def initializePage(self) -> None:
             self.wizard().installer.set_install_target(self.field("InstallTargetDirectory"))
 
-            self.thread = CatDVWizard.InstallThread(self.wizard())
+            self.thread = CatDVWizard.InstallThread(self.wizard(), self.append_to_visible_log)
             self.thread.finished.connect(self.go_next)
             self.thread.start()
+
+        @Slot()
+        def _append_to_visible_log(self, message: str) -> None:
+            self.install_log.append(message)
 
         @Slot()
         def go_next(self):
