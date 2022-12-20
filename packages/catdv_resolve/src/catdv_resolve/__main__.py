@@ -68,30 +68,51 @@ class Installer:
         else:
             raise NotImplementedError("Unsupported platform; can't find DaVinci Resolve's Scripts directory.")
 
+    def get_resolve_user_scripts_directory(self) -> Path:
+        from os import getenv as osgetenv
+        if self.system_platform == Platform.OSX:
+            return Path(osgetenv("HOME"), "Library", "Application Support", "Blackmagic Design", "DaVinci Resolve", "Fusion", "Scripts")
+        elif self.system_platform == Platform.Linux:
+            return Path(osgetenv("HOME"), ".local", "share", "DaVinciResolve", "Fusion", "Scripts")
+        elif self.system_platform == Platform.Windows:
+            return Path(osgetenv("APPDATA"), "Blackmagic Design", "DaVinci Resolve", "Support", "Fusion", "Scripts")
+        else:
+            raise NotImplementedError("Unsupported platform; can't find DaVinci Resolve's Scripts directory.")
+
     @staticmethod
     def get_package_directory():
         return Path(__file__).resolve().parent
 
     def install_plugin_symlink(self) -> None:
-        self.request_admin_escalation_or_exit()
-
         symlink_destination = Path(self.get_resolve_system_scripts_directory(), "Utility", "CatDV-Resolve.py")
-        symlink_destination.unlink(missing_ok=True)
 
-        os_symlink(Path(self.get_package_directory(), "bootstrap.py"), symlink_destination)
+        if not symlink_destination.parent.is_dir():
+            raise OSError("DaVinci Resolve Scripts folder could not be found. Is DaVinci Resolve installed?")
+
+        if symlink_destination.is_file():
+            if not self.args.force:
+                raise OSError("CatDV Resolve plugin is already installed. Use --force to overwrite old installation.")
+
+            symlink_destination.unlink()
+
+        try:
+            os_symlink(Path(self.get_package_directory(), "bootstrap.py"), symlink_destination)
+        except OSError:
+            self.request_admin_escalation_or_exit()
 
         logging.info("CatDV plugin has been successfully installed!")
         self.prevent_opened_shell_from_closing()
 
     def execute(self) -> None:
+        print(self.args)
         try:
-            self.args.target
+            self.args.target_function
         except AttributeError:
             parser.error("No command specified")
             sys.exit(2)
 
         try:
-            self.__getattribute__(self.args.target)()
+            self.__getattribute__(self.args.target_function)()
         except Exception as error:
             logging.fatal(error)
             logging.error("An unexpected error occurred.")
@@ -124,7 +145,9 @@ subparsers = parser.add_subparsers(
 
 install_parser = subparsers.add_parser("install", help="install the plugin")
 install_parser.add_argument("--uac_escalated", action="store_true", help=argparse.SUPPRESS)
-install_parser.set_defaults(target="install_plugin_symlink")
+install_parser.add_argument("--one-user", action="store_true", help="Install for the current user only.")
+install_parser.add_argument("-f", "--force", action="store_true", help="Force install (overwrite old installations)")
+install_parser.set_defaults(target_function="install_plugin_symlink")
 
 args = parser.parse_args()
 
