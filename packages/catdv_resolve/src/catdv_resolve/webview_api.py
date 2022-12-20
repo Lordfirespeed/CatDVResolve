@@ -5,8 +5,8 @@ from json import loads as json_load_string
 from json.decoder import JSONDecodeError
 from webview import Window
 
-from .resolve import ResolveApiJsonHandler
-from .exceptions import *
+from resolve import ResolveApiJsonHandler
+from exceptions import *
 
 
 class WebviewApi:

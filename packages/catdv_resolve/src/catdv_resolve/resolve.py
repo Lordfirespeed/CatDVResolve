@@ -12,8 +12,8 @@ from enum import Enum
 
 from typing import Set
 
-from .exceptions import *
-from .fcpxml import XMLHandler, SubclipHandler
+from exceptions import *
+from fcpxml import XMLHandler, SubclipHandler
 
 
 class DeletingFile:

@@ -51,7 +51,7 @@ def activate_virtual_environment(environment_root):
 activate_virtual_environment(os.path.join(appPath, "venv3.10"))
 sys.path.insert(0, appPath)
 
-from packages.catdv_resolve.src.catdv_resolve.main import main
+from main import main
 
 try:
     resolve
