@@ -1,8 +1,20 @@
+import logging
+import unittest
+
 from os import getenv as osgetenv
 from sys import path as syspath
+from pathlib import Path
 
-from tests.utility import Helper
-from tests.generic import *
+logging.basicConfig(level=logging.DEBUG)
+
+syspath.insert(1, str(Path("..", "..", "catdv_resolve", "src").resolve()))
+
+from catdv_resolve import resolve as resolve_api_mappings
+
+syspath.insert(1, str(Path("..", "src").resolve()))
+
+from catdv_resolve_tests.generic import *
+from catdv_resolve_tests.utility import Helper
 
 syspath.append(str(Path(osgetenv("RESOLVE_SCRIPT_API"), "Modules")))
 
@@ -69,27 +81,30 @@ class TestClipMetadata(TestWithOneClip):
         self.assertEqual(",".join(strings), self.clip.get_metadata("Keywords"))
 
     def test_add_frame_marker(self):
-        marker_to_add = source.resolve.Marker("Test Frame Marker",
-                                              "Comment blah blah",
-                                              5,
-                                              1,
-                                              "Red",
-                                              "TestFrameMarker")
+        marker_to_add = resolve_api_mappings.Marker(
+            "Test Frame Marker",
+            "Comment blah blah",
+            5,
+            1,
+            "Red",
+            "TestFrameMarker"
+        )
         self.clip.add_marker(marker_to_add)
         marker_added = self.clip.get_marker_by_custom_data(marker_to_add.custom_data)
         self.assertEqual(marker_to_add, marker_added)
 
     def test_add_duration_marker(self):
-        marker_to_add = source.resolve.Marker("Test Duration Marker",
-                                              "Comment blah blah",
-                                              5,
-                                              10,
-                                              "Red",
-                                              "TestDurationMarker")
+        marker_to_add = resolve_api_mappings.Marker(
+            "Test Duration Marker",
+            "Comment blah blah",
+            5,
+            10,
+            "Red",
+            "TestDurationMarker"
+        )
         self.clip.add_marker(marker_to_add)
         marker_added = self.clip.get_marker_by_custom_data(marker_to_add.custom_data)
         self.assertEqual(marker_to_add, marker_added)
-
 
 
 if __name__ == "__main__":

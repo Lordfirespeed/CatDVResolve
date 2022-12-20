@@ -5,8 +5,7 @@ from json import loads as json_load_string
 from json.decoder import JSONDecodeError
 from webview import Window
 
-from source.exceptions import *
-from source.resolve import ResolveApiJsonHandler
+from packages.catdv_resolve.src.catdv_resolve.resolve import ResolveApiJsonHandler
 
 
 class WebviewApi:
