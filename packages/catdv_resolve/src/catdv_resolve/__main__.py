@@ -28,8 +28,9 @@ class Platform(Enum):
 
 
 class Installer:
-    def __init__(self) -> None:
+    def __init__(self, args: argparse.Namespace) -> None:
         self.system_platform = Platform.determine()
+        self.args = args
 
     def request_admin_escalation_or_exit(self):
         if self.system_platform != Platform.Windows:
@@ -40,7 +41,7 @@ class Installer:
             return
 
         if not sys.argv[0].endswith("exe"):
-            success = windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1) > 32
+            success = windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv) + " --uac_escalated", None, 1) > 32
 
         sys.exit()
 
@@ -71,7 +72,7 @@ class Installer:
     def get_package_directory():
         return Path(__file__).resolve().parent
 
-    def install_plugin_symlink(self, args: argparse.Namespace) -> None:
+    def install_plugin_symlink(self) -> None:
         self.request_admin_escalation_or_exit()
 
         symlink_destination = Path(self.get_resolve_system_scripts_directory(), "Utility", "CatDV-Resolve.py")
@@ -80,7 +81,28 @@ class Installer:
         os_symlink(Path(self.get_package_directory(), "bootstrap.py"), symlink_destination)
 
         logging.info("CatDV plugin has been successfully installed!")
-        input("Press enter to exit;")
+        self.prevent_opened_shell_from_closing()
+
+    def execute(self) -> None:
+        try:
+            self.args.target
+        except AttributeError:
+            parser.error("No command specified")
+            sys.exit(2)
+
+        try:
+            self.__getattribute__(self.args.target)()
+        except Exception as error:
+            logging.fatal(error)
+            logging.error("An unexpected error occurred.")
+            self.prevent_opened_shell_from_closing()
+            sys.exit(2)
+
+    def prevent_opened_shell_from_closing(self):
+        if not self.args.uac_escalated:
+            return
+
+        input("Press Enter to continue; ")
 
 
 class ParserThatGivesUsageOnError(argparse.ArgumentParser):
@@ -91,7 +113,6 @@ class ParserThatGivesUsageOnError(argparse.ArgumentParser):
 
 
 logging.basicConfig(level=logging.INFO)
-installer_instance = Installer()
 
 
 parser = ParserThatGivesUsageOnError(description="Use the CatDV Resolve Plugin command-line tool.")
@@ -102,16 +123,10 @@ subparsers = parser.add_subparsers(
 )
 
 install_parser = subparsers.add_parser("install", help="install the plugin")
-install_parser.set_defaults(func=installer_instance.install_plugin_symlink)
+install_parser.add_argument("--uac_escalated", action="store_true", help=argparse.SUPPRESS)
+install_parser.set_defaults(target="install_plugin_symlink")
 
 args = parser.parse_args()
-try:
-    args.func
-except AttributeError:
-    parser.error("No command specified")
 
-try:
-    args.func(args)
-except Exception as error:
-    logging.fatal(error)
-    parser.error("An unexpected error occurred.")
+installer_instance = Installer(args)
+installer_instance.execute()
