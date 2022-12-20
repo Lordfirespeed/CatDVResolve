@@ -31,6 +31,19 @@ class Installer:
     def __init__(self) -> None:
         self.system_platform = Platform.determine()
 
+    def request_admin_escalation_or_exit(self):
+        if self.system_platform != Platform.Windows:
+            return
+
+        from ctypes import windll
+        if windll.shell32.IsUserAnAdmin():
+            return
+
+        if not sys.argv[0].endswith("exe"):
+            success = windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1) > 32
+
+        sys.exit()
+
     def get_linux_resolve_dir(self) -> Path:
         if self.system_platform != Platform.Linux:
             raise OSError
@@ -59,10 +72,15 @@ class Installer:
         return Path(__file__).resolve().parent
 
     def install_plugin_symlink(self, args: argparse.Namespace) -> None:
+        self.request_admin_escalation_or_exit()
+
         symlink_destination = Path(self.get_resolve_system_scripts_directory(), "Utility", "CatDV-Resolve.py")
         symlink_destination.unlink(missing_ok=True)
 
-        os_symlink(Path(__file__, "source", "bootstrap.py"), symlink_destination)
+        os_symlink(Path(self.get_package_directory(), "bootstrap.py"), symlink_destination)
+
+        logging.info("CatDV plugin has been successfully installed!")
+        input("Press enter to exit;")
 
 
 class ParserThatGivesUsageOnError(argparse.ArgumentParser):
@@ -72,6 +90,7 @@ class ParserThatGivesUsageOnError(argparse.ArgumentParser):
         sys.exit(2)
 
 
+logging.basicConfig(level=logging.INFO)
 installer_instance = Installer()
 
 
@@ -95,4 +114,4 @@ try:
     args.func(args)
 except Exception as error:
     logging.fatal(error)
-    parser.error("Unexpected error occurred.")
+    parser.error("An unexpected error occurred.")
