@@ -4,7 +4,7 @@ import logging
 import webview
 from packages.catdv_resolve.src.catdv_resolve.webview_api import WebviewApi
 from pathlib import Path
-from flask import Flask, request
+from flask import Flask
 
 
 def get_app_directory():
