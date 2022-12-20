@@ -5,7 +5,8 @@ from json import loads as json_load_string
 from json.decoder import JSONDecodeError
 from webview import Window
 
-from packages.catdv_resolve.src.catdv_resolve.resolve import ResolveApiJsonHandler
+from .resolve import ResolveApiJsonHandler
+from .exceptions import *
 
 
 class WebviewApi:
@@ -57,7 +58,7 @@ class WebviewApi:
         if not self.window:
             return
 
-        self.window.load_html("assets/index.html")
+        self.window.load_html("static/index.html")
 
 
 
