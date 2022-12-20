@@ -4,6 +4,7 @@ import logging
 import webview
 from packages.catdv_resolve.src.catdv_resolve.webview_api import WebviewApi
 from pathlib import Path
+from flask import Flask, request
 
 
 def get_app_directory():
@@ -21,8 +22,13 @@ def main(resolve):
 
     webview_api = WebviewApi(resolve)
 
-    window = webview.create_window("DaVinci Resolve - CatDV Integration", str(Path(
-        "assets/index.html").resolve()), js_api=webview_api, background_color="#1f1f1f")
+    server = Flask(__name__, static_folder="./static")
+
+    @server.route("/", methods=["GET"])
+    def _():
+        return server.redirect("/static/index.html")
+
+    window = webview.create_window("DaVinci Resolve - CatDV Integration", server, js_api=webview_api, background_color="#1f1f1f")
     webview_api.window = window
 
     webview.start(debug=True)
