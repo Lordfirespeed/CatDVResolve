@@ -2,20 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
     <title>CatDV Server Resolve Plugin</title>
 </head>
 <body>
-    <img id="logo" src="resources/logo.png">
+    <img id="logo" src="./resources/logo.png">
     <div id="window" class="center_children">
         <div id="main" class="center_children">
-            <form style="margin-bottom:10px">
+            <form id="go_to_server_form" action="">
                 <h1>Enter CatDV Server URL</h1>
                 <label for="address">Server Address:</label>
-                <input type="text" id="address" name="address"><br>
+                <input type="url" id="address" name="address" style="margin-bottom: 4px">
+                <input type="submit" class="form-submit-button">
             </form>
-
-            <button type="button" id="go_to_server_button" name="go_to_server">Go</button>
 
             <div id="response-container"></div>
         </div>
@@ -29,11 +28,19 @@
         webviewReady = true
     })
 
-    const button = document.getElementById("go_to_server_button")
+    const form = document.getElementById("go_to_server_form")
 
-    button.addEventListener("click", () => {
+    form.addEventListener("submit", (event) => {
+        event.preventDefault()
+
         let container = document.getElementById('address')
         let entered_text = container.value
+
+        if (entered_text === "") {
+            alert("Please provide a CatDV web panel URL.")
+            return
+        }
+
         window.location.assign(entered_text)
     })
 </script>
