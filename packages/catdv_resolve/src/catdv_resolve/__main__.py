@@ -84,7 +84,12 @@ class Installer:
         return Path(__file__).resolve().parent
 
     def install_plugin_symlink(self) -> None:
-        symlink_destination = Path(self.get_resolve_system_scripts_directory(), "Utility", "CatDV-Resolve.py")
+        scripts_directory = self.get_resolve_system_scripts_directory()
+
+        if self.args.one_user:
+            scripts_directory = Path(self.get_resolve_user_scripts_directory())
+
+        symlink_destination = Path(scripts_directory, "Utility", "CatDV-Resolve.py")
 
         if not symlink_destination.parent.is_dir():
             raise OSError("DaVinci Resolve Scripts folder could not be found. Is DaVinci Resolve installed?")
@@ -144,7 +149,7 @@ subparsers = parser.add_subparsers(
 
 install_parser = subparsers.add_parser("install", help="install the plugin")
 install_parser.add_argument("--uac_escalated", action="store_true", help=argparse.SUPPRESS)
-install_parser.add_argument("--one-user", action="store_true", help="Install for the current user only.")
+install_parser.add_argument("--one_user", action="store_true", help="Install for the current user only.")
 install_parser.add_argument("-f", "--force", action="store_true", help="Force install (overwrite old installations)")
 install_parser.set_defaults(target_function="install_plugin_symlink")
 
