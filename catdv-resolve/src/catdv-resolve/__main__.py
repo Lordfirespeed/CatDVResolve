@@ -89,7 +89,7 @@ class Installer:
         if self.args.one_user:
             scripts_directory = Path(self.get_resolve_user_scripts_directory())
 
-        symlink_destination = Path(scripts_directory, "Utility", "CatDV-Resolve.py")
+        symlink_destination = Path(scripts_directory, "Utility", "CatDV.py")
 
         if not symlink_destination.parent.is_dir():
             raise OSError("DaVinci Resolve Scripts folder could not be found. Is DaVinci Resolve installed?")
