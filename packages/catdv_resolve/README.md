@@ -3,20 +3,33 @@
 Ensure that your CatDV server is sufficiently up-to-date (>=10.1.4).
 
 ## Client
-### Prerequisite: Python
+### Prerequisite: Python 3
 For DaVinci Resolve 16 / 17:
-Install 
+- Install [Python 3.6](https://www.python.org/downloads/release/python-368/)
 
+For DaVinci Resolve 18:
+- Install any version of Python from 3.6 through 3.10 ([Downloads](https://www.python.org/downloads))
+- Preferably, the latest version of [Python 3.10](https://www.python.org/downloads/release/python-3109/)
+
+*Note: All downloads are at the bottom of linked pages. Scroll down!*
 ### Module
-Once the module has been installed using
-```bash
-pip install catdv_resolve
-```
-Use the command
-```bash
-python -m catdv_resolve install
-```
-to finalise installation (create a symbolic link so that DaVinci Resolve can find the plugin's files).
+Open a new terminal window. 
+
+1) Ensure you are executing the intended python version:
+    ```bash
+    python3 --version
+    ```
+2) Install the package:
+    ```bash
+    pip3 install catdv_resolve
+    ```
+3) Finalise the installation:
+    ```bash
+    python3 -m catdv_resolve install
+    ```
+    (This step create a symbolic link so that DaVinci Resolve can find the plugin's files).
+
+For advanced users: [Advanced Installation](#advanced-installation)
 
 # Usage
 In DaVinci Resolve, 
@@ -25,3 +38,36 @@ In DaVinci Resolve,
 - Choose `CatDV` to open the plugin's panel.
 - You will be prompted to enter the URL for your CatDV Web Panel.
 - Login to your account using the `Login` button located at the top-right.
+
+# Advanced Installation
+The package can also be installed into a Python virtual environment (`venv`) of the appropriate Python version.
+1) Ensure you are executing the intended python version:
+    ```bash
+    python3 --version
+    ```
+2) Create a new `venv` using the Virtualenv tool:
+    ```bash
+    python3 -m venv [target]
+    ```
+    E.g. `python3 -m venv ./venv310` is an ideal choice for a Python 3.10 `venv`.
+
+    Following instructions assume the `target` provided was `./venv310`.
+3) Activate the `venv`:
+    #### Windows
+    ```cmd
+    ./venv310/Scripts/activate.bat
+    ```
+    #### Mac / Linux / *nix
+    ```bash
+    source ./venv310/bin/activate
+    ```
+4) Install the package:
+    ```bash
+    pip3 install catdv_resolve
+    ```
+5) Finalise the installation:
+    ```bash
+    python3 -m catdv_resolve install
+    ```
+    (This step create a symbolic link so that DaVinci Resolve can find the plugin's files).
+    
