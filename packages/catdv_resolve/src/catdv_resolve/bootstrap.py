@@ -61,9 +61,15 @@ data_path = get_data_directory()
 
 os.chdir(data_path)
 
+logging_level = os.getenv("CATDV_RESOLVE_LOGGING_LEVEL")  # should be an integer https://docs.python.org/3/library/logging.html#logging-levels
+
+if not logging_level:
+    logging_level = logging.INFO
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging_level,
     filename="_latest.log",
+    filemode="w",
     format="%(levelname)s %(asctime)s - %(message)s"
 )
 
