@@ -71,7 +71,7 @@ if debug_venv_root:
     logging.debug(f"Activating DEBUG virtual env at `{debug_venv_root}`")
     activate_virtual_environment(Path(debug_venv_root))
 else:
-    activate_virtual_environment(app_path)
+    activate_virtual_environment(get_environment_root())
 
 sys.path.insert(0, str(app_path))
 
