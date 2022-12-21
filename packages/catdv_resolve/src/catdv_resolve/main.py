@@ -2,15 +2,40 @@ import sys
 import logging
 import webview
 from pathlib import Path
-from webview_api import WebviewApi
 from flask import Flask
+
+from webview_api import WebviewApi
+from config import Config
 
 
 lock_path = Path(".lock")
+window_title = "DaVinci Resolve - CatDV Integration"
+
+
+def check_for_app_already_running():
+    if not lock_path.exists():
+        return
+
+    logging.fatal("Can not acquire app lock: App is already open!")
+    import pygetwindow
+
+    try:
+        already_open_app = pygetwindow.getWindowsWithTitle(window_title)[0]
+    except IndexError:
+        logging.error("The lock exists, but the app doesn't seem to be open. Removing lock...")
+        lock_path.unlink(missing_ok=True)
+        return
+
+    try:
+        already_open_app.activate()
+    except pygetwindow.PyGetWindowException:
+        pass
+
+    sys.exit(2)
 
 
 def main(resolve):
-    logger = logging.getLogger("root")
+    logger = logging.getLogger(__name__)
 
     logger.info("Starting CatDV Panel...")
     logger.info('Python %s on %s' % (sys.version, sys.platform))
@@ -23,18 +48,31 @@ def main(resolve):
     def _():
         return server.redirect("/static/index.html")
 
-    window = webview.create_window("DaVinci Resolve - CatDV Integration", server, js_api=webview_api_instance, background_color="#1f1f1f")
+    window = webview.create_window(window_title, server, js_api=webview_api_instance, background_color="#1e1e22")
     webview_api_instance.window = window
 
-    if lock_path.exists():
-        logging.fatal("Can not acquire app lock: App is already open!")
-        sys.exit(2)
+    check_for_app_already_running()
+
+    def on_start():
+        try:
+            window.index_url = server.__webview_url
+        except AttributeError as error:
+            window.index_url = None
+            logging.exception(error)
+
+        try:
+            saved_url = Config["saved_server_url"]
+            logging.info("Loading saved CatDV server URL...")
+            window.load_url(saved_url)
+        except KeyError:
+            pass
 
     try:
         lock_path.touch(exist_ok=False)
-        webview.start(debug=logger.level <= logging.DEBUG)
+        webview.start(debug=logger.level <= logging.DEBUG, func=on_start)
     finally:
         lock_path.unlink(missing_ok=True)
+        Config.dump_to_file()
 
 
 if __name__ == "__main__":
