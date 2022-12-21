@@ -6,3 +6,4 @@
 /json_clips/
 /logo/
 *.env
+dist/
