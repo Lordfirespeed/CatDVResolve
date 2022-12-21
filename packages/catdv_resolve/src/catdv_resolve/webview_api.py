@@ -58,7 +58,12 @@ class WebviewApi:
         if not self.window:
             return
 
-        self.window.load_html("static/index.html")
+        if not self.window.index_url:
+            logging.info("Tried to go back to index, but couldn't find the index URL.")
+            return
 
+        self.window.load_url(self.window.index_url)
 
-
+    def load_server_url(self, url: str) -> None:
+        Config["saved_server_url"] = url
+        self.window.load_url(url)
