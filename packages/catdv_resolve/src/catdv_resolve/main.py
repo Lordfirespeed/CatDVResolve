@@ -1,26 +1,22 @@
-import os
 import sys
 import logging
 import webview
-from webview_api import WebviewApi
 from pathlib import Path
+from webview_api import WebviewApi
 from flask import Flask
 
 
-def get_app_directory():
-    return Path(__file__).resolve().parent
+lock_path = Path(".lock")
 
 
 def main(resolve):
-    app_path = get_app_directory()
-    os.chdir(app_path)
+    logger = logging.getLogger("root")
 
-    log_file_path = os.path.join(app_path, "_latest.log")
-    logging.basicConfig(level=logging.DEBUG, filename=log_file_path, filemode="w", format="%(levelname)s %(asctime)s - %(message)s")
+    logger.info("Starting ")
+    logger.info('Python %s on %s' % (sys.version, sys.platform))
+    logger.info("henlo")
 
-    logging.info('Python %s on %s' % (sys.version, sys.platform))
-
-    webview_api = WebviewApi(resolve)
+    webview_api_instance = WebviewApi(resolve)
 
     server = Flask(__name__, static_folder="./static")
 
@@ -28,7 +24,19 @@ def main(resolve):
     def _():
         return server.redirect("/static/index.html")
 
-    window = webview.create_window("DaVinci Resolve - CatDV Integration", server, js_api=webview_api, background_color="#1f1f1f")
-    webview_api.window = window
+    window = webview.create_window("DaVinci Resolve - CatDV Integration", server, js_api=webview_api_instance, background_color="#1f1f1f")
+    webview_api_instance.window = window
 
-    webview.start(debug=True)
+    if lock_path.exists():
+        logging.fatal("Can not acquire app lock: App is already open!")
+        sys.exit(2)
+
+    try:
+        lock_path.touch(exist_ok=False)
+        webview.start(debug=logger.level <= logging.DEBUG)
+    finally:
+        lock_path.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    main(None)
