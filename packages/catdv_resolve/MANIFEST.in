@@ -1,2 +1,2 @@
 include README.md
-recursive-include src/catdv_resolve/assets *
+recursive-include src/catdv_resolve/static *
