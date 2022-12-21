@@ -29,7 +29,7 @@ class WebviewApi:
         level(message)
         return {"message": message}
 
-    def import_json_clips(self, json_string):
+    def import_json_clips(self, json_string: str) -> dict | str:
         try:
             data = json_load_string(json_string)
         except JSONDecodeError:
@@ -54,7 +54,7 @@ class WebviewApi:
 
         return self._log_and_return(logging.info, "Successfully added item(s) to media pool.")
 
-    def direct_to_index(self):
+    def direct_to_index(self) -> None:
         if not self.window:
             return
 

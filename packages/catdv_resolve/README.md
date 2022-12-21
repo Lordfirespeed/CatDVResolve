@@ -1,8 +1,13 @@
 # Installation
 ## Server
-Ensure that your CatDV server is sufficiently up-to-date and has the DaVinci Resolve extension enabled.(?)
+Ensure that your CatDV server is sufficiently up-to-date (>=10.1.4).
 
 ## Client
+### Prerequisite: Python
+For DaVinci Resolve 16 / 17:
+Install 
+
+### Module
 Once the module has been installed using
 ```bash
 pip install catdv_resolve
