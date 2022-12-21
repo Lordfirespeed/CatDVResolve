@@ -12,9 +12,8 @@ lock_path = Path(".lock")
 def main(resolve):
     logger = logging.getLogger("root")
 
-    logger.info("Starting ")
+    logger.info("Starting CatDV Panel...")
     logger.info('Python %s on %s' % (sys.version, sys.platform))
-    logger.info("henlo")
 
     webview_api_instance = WebviewApi(resolve)
 
