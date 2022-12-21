@@ -7,6 +7,7 @@ from webview import Window
 
 from resolve import ResolveApiJsonHandler
 from exceptions import *
+from config import Config
 
 
 class WebviewApi:
