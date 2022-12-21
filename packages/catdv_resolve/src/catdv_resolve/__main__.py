@@ -104,7 +104,6 @@ class Installer:
         self.prevent_opened_shell_from_closing()
 
     def execute(self) -> None:
-        print(self.args)
         try:
             self.args.target_function
         except AttributeError:
