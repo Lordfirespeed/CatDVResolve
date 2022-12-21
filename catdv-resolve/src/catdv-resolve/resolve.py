@@ -653,6 +653,7 @@ class ResolveApiJsonHandler:
                 return self.import_simple_json_clip(clip_data, media_pool)
 
             if clip_data["type"] in self.complex_clip_types:
+                raise NotImplementedError
                 return self.import_complex_json_clip(clip_data, media_pool)
 
             raise NotImplementedError
