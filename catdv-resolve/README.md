@@ -27,7 +27,7 @@ Open a new terminal window.
     ```bash
     python3 -m catdv-resolve install
     ```
-    (This step create a symbolic link so that DaVinci Resolve can find the plugin's files).
+    (This step creates a symbolic link so that DaVinci Resolve can find the plugin's files).
 
 For advanced users: [Advanced Installation](#advanced-installation)
 
@@ -69,5 +69,5 @@ The package can also be installed into a Python virtual environment (`venv`) of 
     ```bash
     python3 -m catdv-resolve install
     ```
-    (This step create a symbolic link so that DaVinci Resolve can find the plugin's files).
+    (This step creates a symbolic link so that DaVinci Resolve can find the plugin's files).
     
