@@ -18,12 +18,17 @@ Open a new terminal window.
 1) Ensure you are executing the intended python version:
     ```bash
     python3 --version
-    ```
-2) Install the package:
+2) Optional step:
+
+   Install the wheel package to utilise Python's newer package install methods.
+   ```bash
+   pip3 install wheel
+   ```
+3) Install the package:
     ```bash
     pip3 install catdv-resolve
     ```
-3) Finalise the installation:
+4) Finalise the installation:
     ```bash
     python3 -m catdv-resolve install
     ```
@@ -61,11 +66,17 @@ The package can also be installed into a Python virtual environment (`venv`) of 
     ```bash
     source ./venv310/bin/activate
     ```
-4) Install the package:
+4) Optional step:
+
+   Install the wheel package to utilise Python's newer package install methods.
+   ```bash
+   pip3 install wheel
+   ```
+5) Install the package:
     ```bash
     pip3 install catdv-resolve
     ```
-5) Finalise the installation:
+6) Finalise the installation:
     ```bash
     python3 -m catdv-resolve install
     ```
