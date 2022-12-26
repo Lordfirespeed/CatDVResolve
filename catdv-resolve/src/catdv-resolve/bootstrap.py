@@ -7,6 +7,7 @@ This file bootstraps the CatDV Importer source for DaVinci Resolve.
 import sys
 import os
 import logging
+import platform
 from pathlib import Path
 
 # as the script is running from the workspace -> scripts context menu,
@@ -32,13 +33,18 @@ def get_data_directory() -> Path:
 
 
 def get_environment_root() -> Path:
-    return get_app_directory().parent.parent.parent
+    system_name = platform.system()
+    if system_name == "Windows":
+        return get_app_directory().parent.parent.parent
+    else:
+        return get_app_directory().parent.parent.parent.parent
 
 
 def activate_virtual_environment(environment_root: Path):
     """Configures the (virtual) environment starting at ``environment_root``."""
 
-    if sys.platform == 'win32':
+    system_name = platform.system()
+    if system_name == "Windows":
         site_packages = Path(environment_root, 'Lib', 'site-packages')
     else:
         site_packages = Path(environment_root, 'lib', 'python%s' % sys.version[:3], 'site-packages')
