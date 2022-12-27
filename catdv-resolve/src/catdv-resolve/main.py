@@ -6,6 +6,7 @@ from flask import Flask
 
 from webview_api import WebviewApi
 from config import Config
+from system_platform import Platform
 
 
 lock_path = Path(".lock")
@@ -32,6 +33,21 @@ def check_for_app_already_running():
         pass
 
     sys.exit(2)
+
+
+def choose_web_renderer():
+    system_platform = Platform.determine()
+
+    if system_platform == Platform.Windows:
+        return None
+
+    if system_platform in (Platform.Linux, Platform.OSX):
+        return "qt"
+
+    import platform
+    logging.warning(f"'{platform.system()}' is not recognised as a supported operating system.")
+
+    return None
 
 
 def main(resolve):
@@ -69,7 +85,7 @@ def main(resolve):
 
     try:
         lock_path.touch(exist_ok=False)
-        webview.start(debug=logger.level <= logging.DEBUG, func=on_start)
+        webview.start(debug=logger.level <= logging.DEBUG, gui=choose_web_renderer(), func=on_start)
     finally:
         lock_path.unlink(missing_ok=True)
         Config.dump_to_file()
