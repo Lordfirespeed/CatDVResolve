@@ -31,7 +31,7 @@ jobs:
         pip install build setuptools twine
     - name: Build package
       run: |
-        cd catdv-resolve
+        cd catdv_resolve
         python -m build
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
