@@ -17,6 +17,7 @@ class Installer:
         if self.system_platform != Platform.Windows:
             return
 
+        # https://stackoverflow.com/a/72732324/11045433 BaiJiFeiLong
         from ctypes import windll
         if windll.shell32.IsUserAnAdmin():
             return
@@ -24,7 +25,8 @@ class Installer:
         if sys.argv[0].endswith("exe"):
             sys.exit()
 
-        success = windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv) + " --uac_escalated", None, 1) > 32
+        returncode = windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv) + " --uac_escalated", None, 1)
+        success = returncode > 32
 
         if not success:
             logging.fatal("UAC escalation was declined. Admin priveleges are needed to install globally.")
