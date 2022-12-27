@@ -60,7 +60,7 @@ The package can also be installed into a Python virtual environment (`venv`) of 
 3) Activate the `venv`:
     #### Windows
     ```cmd
-    ./venv310/Scripts/activate.bat
+    .\venv310\Scripts\activate.bat
     ```
     #### Mac / Linux / *nix
     ```bash
