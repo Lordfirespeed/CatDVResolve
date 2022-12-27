@@ -4,27 +4,8 @@ import sys
 from pathlib import Path
 import logging
 from os import symlink as os_symlink
-from enum import Enum, auto
 
-
-class Platform(Enum):
-    Unknown = auto()
-    OSX = auto()
-    Linux = auto()
-    Windows = auto()
-
-    @classmethod
-    def determine(cls) -> Platform:
-        import platform
-        system_name = platform.system()
-        if system_name == "Darwin":
-            return cls.OSX
-        elif system_name == "Linux":
-            return cls.Linux
-        elif system_name == "Windows":
-            return cls.Windows
-        else:
-            return cls.Unknown
+from system_platform import Platform
 
 
 class Installer:
