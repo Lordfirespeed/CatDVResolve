@@ -26,11 +26,11 @@ Open a new terminal window.
    ```
 3) Install the package:
     ```bash
-    pip3 install catdv-resolve
+    pip3 install catdv_resolve
     ```
 4) Finalise the installation:
     ```bash
-    python3 -m catdv-resolve install
+    python3 -m catdv_resolve install
     ```
     (This step creates a symbolic link so that DaVinci Resolve can find the plugin's files).
 
@@ -74,11 +74,11 @@ The package can also be installed into a Python virtual environment (`venv`) of 
    ```
 5) Install the package:
     ```bash
-    pip3 install catdv-resolve
+    pip3 install catdv_resolve
     ```
 6) Finalise the installation:
     ```bash
-    python3 -m catdv-resolve install
+    python3 -m catdv_resolve install
     ```
     (This step creates a symbolic link so that DaVinci Resolve can find the plugin's files).
     

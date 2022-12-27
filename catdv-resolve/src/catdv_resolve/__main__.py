@@ -5,7 +5,7 @@ from pathlib import Path
 import logging
 from os import symlink as os_symlink
 
-from system_platform import Platform
+from ..catdv_resolve.system_platform import Platform
 
 
 class Installer:

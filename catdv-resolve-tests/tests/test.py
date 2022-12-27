@@ -7,7 +7,7 @@ from pathlib import Path
 
 logging.basicConfig(level=logging.DEBUG)
 
-syspath.insert(1, str(Path("..", "..", "catdv-resolve", "src").resolve()))
+syspath.insert(1, str(Path("..", "..", "catdv_resolve", "src").resolve()))
 
 from catdv_resolve import resolve as resolve_api_mappings
 
