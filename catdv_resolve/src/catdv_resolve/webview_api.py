@@ -4,6 +4,7 @@ import traceback
 from json import loads as json_load_string
 from json.decoder import JSONDecodeError
 from webview import Window
+from urllib.parse import urlparse
 
 from resolve import ResolveApiJsonHandler
 from exceptions import *
@@ -65,6 +66,12 @@ class WebviewApi:
 
         self.window.load_url(self.window.index_url)
 
-    def load_server_url(self, url: str) -> None:
-        Config["saved_server_url"] = url
-        self.window.load_url(url)
+    def load_catdv_server_resolve_panel(self, url: str) -> None:
+        url = urlparse(url)
+        panel_path = url.path + ("" if url.path.endswith("/") else "/") + "catdv/resolve"
+        panel_url = url._replace(path=panel_path)
+
+        panel_url_string = panel_url.geturl()
+
+        Config["saved_server_url"] = panel_url_string
+        self.window.load_url(panel_url_string)

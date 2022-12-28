@@ -11,6 +11,7 @@
         <div id="main">
             <form id="go_to_server_form" action="">
                 <h1>Enter CatDV Server URL</h1>
+                <label for="address"></label>
                 <input type="url" id="address" name="address" placeholder="https://catdv.mycompany.com:8080" style="margin-bottom: 20px">
                 <input type="submit" class="form-submit-button">
             </form>
@@ -28,25 +29,91 @@
     })
 
     const form = document.getElementById("go_to_server_form")
+    const url_field = document.getElementById('address')
 
-    form.addEventListener("submit", (event) => {
-        event.preventDefault()
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
 
         if (!webviewReady) {
             alert("Please wait a moment...")
             return
         }
 
-        let container = document.getElementById('address')
-        let entered_text = container.value
-
-        if (entered_text === "") {
-            alert("Please provide a CatDV web panel URL.")
-            return
+        await validate_address()
+        if (!url_field.checkValidity()) {
+            console.log("woow. bad")
+            return;
         }
 
-        pywebview.api.load_server_url(entered_text)
+        pywebview.api.load_catdv_server_resolve_panel(url_field.value);
     })
+
+    function client_validate_address() {
+        if (url_field.validity.typeMismatch) {
+            url_field.setCustomValidity("Please enter a URL.");
+            return false;
+        }
+
+        let entered_text = url_field.value;
+
+        if (entered_text === "") {
+            url_field.setCustomValidity("Please provide a CatDV web panel URL.");
+            return false;
+        }
+
+        let entered_URL = new URL(entered_text);
+
+        if (!entered_URL.protocol in ["http:", "https:"]) {
+            url_field.setCustomValidity("Please enter a HTTP URL.");
+            return false;
+        }
+
+        url_field.setCustomValidity("")
+        return true;
+    }
+
+    function server_validate_address() {
+        let entered_URL = new URL(url_field.value);
+
+        let validation_request_URL = new URL("/validate", document.URL);
+        validation_request_URL.searchParams.append("url", entered_URL.toString());
+
+        url_field.setCustomValidity("Checking for CatDV Server...");
+
+        return fetch(validation_request_URL)
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Not 2xx response from server", {cause: response});
+                }
+                return response.json();
+            })
+            .then((response_json) => {
+                if (response_json.validation_result !== true) {
+                    url_field.setCustomValidity("URL isn't recognised as a CatDV Server.");
+                    return false;
+                }
+                url_field.setCustomValidity("");
+                return true;
+            })
+            .catch((error) => {
+                url_field.setCustomValidity("Could not verify that entered URL is a CatDV Server.");
+                console.log(error);
+            })
+    }
+
+    async function validate_address() {
+        client_validate_address()
+        if (!url_field.checkValidity()) {
+            return false;
+        }
+        await server_validate_address()
+        return url_field.checkValidity();
+    }
+
+    // https://developer.mozilla.org/en-US/docs/Learn/Forms/Form_validation#validating_forms_using_javascript
+    url_field.addEventListener("blur", validate_address)
+    url_field.addEventListener("input", client_validate_address)
+
 </script>
 
 </html>
