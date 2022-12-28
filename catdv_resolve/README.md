@@ -44,6 +44,16 @@ In DaVinci Resolve,
 - You will be prompted to enter the URL for your CatDV Web Panel.
 - Login to your account using the `Login` button located at the top-right.
 
+# Upgrade
+Sometimes new versions of the software may be released; to upgrade the installed version of the panel, use 
+a terminal to execute the following commands:
+1) ```bash
+   pip3 install --upgrade catdv_resolve
+   ```
+2) ```bash
+   python3 -m catdv_resolve install --force
+   ```
+
 # Advanced Installation
 The package can also be installed into a Python virtual environment (`venv`) of the appropriate Python version.
 1) Ensure you are executing the intended python version:
