@@ -1,3 +1,8 @@
+:root {
+    --color-invalid: #db3832;
+    --color-valid: #32a84a;
+}
+
 body {
     background: #1e1e22;
     color: white;
@@ -13,6 +18,19 @@ h1 {
 input {
     font-size: inherit;
     width: 100%;
+    border-width: 3px;
+    border-radius: 4px;
+}
+
+/* https://css-tricks.com/snippets/css/form-validation-styling-on-input-focus/ */
+/* Only show invalid ring while not focused */
+input:not(:focus):not(:placeholder-shown):invalid {
+  border-color: var(--color-invalid);
+}
+/* Only show valid ring while not focused and if a value is entered */
+/* :empty won't work here as that targets elements that have no children. Therefore employ :placeholder-shown */
+input:not(:focus):not(:placeholder-shown):valid {
+  border-color: var(--color-valid);
 }
 
 .form-submit-button {
