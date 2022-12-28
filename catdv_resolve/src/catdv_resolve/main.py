@@ -76,8 +76,6 @@ def make_web_server() -> Flask:
         api_path = url_to_validate.path + ("" if url_to_validate.path.endswith("/") else "/") + "catdv/api/info"
         api_url = url_to_validate._replace(path=api_path)
 
-        print(api_url.geturl())
-
         try:
             response = fetch.get(api_url.geturl())
         except fetch.exceptions.RequestException:
