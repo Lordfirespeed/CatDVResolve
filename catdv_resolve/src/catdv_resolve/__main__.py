@@ -30,7 +30,7 @@ class Installer:
         success = returncode > 32
 
         if not success:
-            logging.fatal("UAC escalation was declined. Admin priveleges are needed to install globally.")
+            logging.fatal("UAC escalation was declined. Admin privileges are needed to install globally.")
 
         sys.exit()
 
