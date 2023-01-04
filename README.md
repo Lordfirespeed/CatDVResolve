@@ -3,7 +3,7 @@ Plugin for DaVinci Resolve 17/18 that allows import of assets via a CatDV Web In
 
 ## Upload to PyPI
 
-### Using GitHub Actions
+### Using GitHub Actions (Automatic)
 - Push changes to target branch and bump version number appropriately 
 - (One-Time) Set up API key secret
   - Github repo -> "Settings" -> "Secrets" -> "Actions" -> "New repository secret"
@@ -12,7 +12,7 @@ Plugin for DaVinci Resolve 17/18 that allows import of assets via a CatDV Web In
 - Select "Upload Python Package" workflow on the sidebar
 - Select "Run Workflow", select the target branch, and press the green "Run workflow" button
 
-### Using Twine
+### Using Twine (Manual)
 - Clone the repository 
 - Make a clean virtual environment `python -m venv ./venv`
 - Activate the environment
