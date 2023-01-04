@@ -23,6 +23,7 @@ class Installer:
             return
 
         if sys.argv[0].endswith("exe"):
+            logging.fatal("This script is not intended to be built as a portable executable. It should be distributed as python source code.")
             sys.exit()
 
         returncode = windll.shell32.ShellExecuteW(None, "runas", sys.executable, "-m catdv_resolve " + " ".join(sys.argv[1:]) + " --uac_escalated", None, 1)
@@ -90,8 +91,9 @@ class Installer:
 
         try:
             os_symlink(Path(self.get_package_directory(), "bootstrap.py"), symlink_destination)
-        except OSError:
+        except OSError as error:
             self.request_admin_escalation_or_exit()
+            raise error
 
         logging.info("CatDV plugin has been successfully installed!")
         self.prevent_opened_shell_from_closing()
