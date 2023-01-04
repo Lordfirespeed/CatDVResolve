@@ -37,8 +37,8 @@ class Installer:
         if self.system_platform != Platform.Linux:
             raise OSError
 
-        opt_path = Path("opt", "resolve").resolve()
-        home_path = Path("home", "resolve").resolve()
+        opt_path = Path("/", "opt", "resolve").resolve()
+        home_path = Path("/", "home", "resolve").resolve()
 
         if home_path.is_dir():
             return home_path
@@ -47,7 +47,7 @@ class Installer:
 
     def get_resolve_system_scripts_directory(self) -> Path:
         if self.system_platform == Platform.OSX:
-            return Path("Library", "Application Support", "Blackmagic Design", "DaVinci Resolve", "Fusion", "Scripts")
+            return Path("/", "Library", "Application Support", "Blackmagic Design", "DaVinci Resolve", "Fusion", "Scripts")
         elif self.system_platform == Platform.Linux:
             return Path(self.get_linux_resolve_dir(), "Fusion", "Scripts")
         elif self.system_platform == Platform.Windows:
