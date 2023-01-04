@@ -16,7 +16,7 @@ Plugin for DaVinci Resolve 17/18 that allows import of assets via a CatDV Web In
 - Clone the repository 
 - Make a clean virtual environment `python -m venv ./venv`
 - Activate the environment
-- Install build dependencies `pip install --upgrade setuptools build wheel twine`
+- Install build dependencies `pip install -r requirements.txt`
 - Create some package distributions
   - `cd catdv_resolve`
   - `python -m build`
