@@ -25,7 +25,7 @@ class Installer:
         if sys.argv[0].endswith("exe"):
             sys.exit()
 
-        returncode = windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv) + " --uac_escalated", None, 1)
+        returncode = windll.shell32.ShellExecuteW(None, "runas", sys.executable, "-m catdv_resolve " + " ".join(sys.argv[1:]) + " --uac_escalated", None, 1)
         success = returncode > 32
 
         if not success:
