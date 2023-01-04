@@ -27,7 +27,7 @@ class DeletingFile:
         self.file.unlink()
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class Marker:
     name: str
     comment: str
