@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 import logging
 import traceback
 from json import loads as json_load_string
@@ -31,7 +31,7 @@ class WebviewApi:
         level(message)
         return {"message": message}
 
-    def import_json_clips(self, json_string: str) -> dict | str:
+    def import_json_clips(self, json_string: str) -> Union(dict, str):
         try:
             data = json_load_string(json_string)
         except JSONDecodeError:
