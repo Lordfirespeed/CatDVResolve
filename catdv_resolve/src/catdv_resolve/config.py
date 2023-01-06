@@ -24,7 +24,7 @@ class _Config:
         return cls.__instance
 
     def load_defaults(self):
-        self._data |= self._defaults
+        self._data.update(self._defaults)
 
     def load_from_file(self) -> None:
         if not self.filepath.is_file():
@@ -35,7 +35,7 @@ class _Config:
         with open(self.filepath) as config_file:
             new_data: dict = json.load(config_file)
 
-        self._data |= new_data
+        self._data.update(new_data)
 
     def dump_to_file(self) -> None:
         logging.info("Dumping config...")
