@@ -31,7 +31,7 @@ class WebviewApi:
         level(message)
         return {"message": message}
 
-    def import_json_clips(self, json_string: str) -> Union(dict, str):
+    def import_json_clips(self, json_string: str) -> Union[dict, str]:
         try:
             data = json_load_string(json_string)
         except JSONDecodeError:
