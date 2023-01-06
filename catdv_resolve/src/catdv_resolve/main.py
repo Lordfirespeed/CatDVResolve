@@ -26,7 +26,7 @@ def check_for_app_already_running():
         already_open_app = pygetwindow.getWindowsWithTitle(window_title)[0]
     except IndexError:
         logging.error("The lock exists, but the app doesn't seem to be open. Removing lock...")
-        lock_path.unlink(missing_ok=True)
+        lock_path.unlink()
         return
 
     try:
@@ -128,8 +128,8 @@ def main(resolve):
         lock_path.touch(exist_ok=False)
         webview.start(debug=logger.level <= logging.DEBUG, gui=choose_web_renderer(), func=on_start)
     finally:
-        lock_path.unlink(missing_ok=True)
         Config.dump_to_file()
+        lock_path.unlink()
 
 
 if __name__ == "__main__":
