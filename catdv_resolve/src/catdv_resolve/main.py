@@ -15,6 +15,11 @@ lock_path = Path(".lock")
 window_title = "DaVinci Resolve - CatDV Integration"
 
 
+def app_not_open_but_lock_exists():
+    logging.error("The lock exists, but the app doesn't seem to be open. Removing lock...")
+    lock_path.unlink()
+
+
 def check_for_app_already_running():
     if not lock_path.exists():
         return
@@ -25,8 +30,13 @@ def check_for_app_already_running():
     try:
         already_open_app = pygetwindow.getWindowsWithTitle(window_title)[0]
     except IndexError:
-        logging.error("The lock exists, but the app doesn't seem to be open. Removing lock...")
-        lock_path.unlink()
+        app_not_open_but_lock_exists()
+        return
+    except AttributeError:
+        open_apps = pygetwindow.getAllTitles()
+        if window_title in open_apps:
+            sys.exit(2)
+        app_not_open_but_lock_exists()
         return
 
     try:
@@ -126,7 +136,7 @@ def main(resolve):
 
     try:
         lock_path.touch(exist_ok=False)
-        webview.start(debug=logger.level <= logging.DEBUG, gui=choose_web_renderer(), func=on_start)
+        webview.start(debug=False, gui=choose_web_renderer(), func=on_start)
     finally:
         Config.dump_to_file()
         lock_path.unlink()
