@@ -34,7 +34,7 @@ def check_for_app_already_running():
         return
     except AttributeError:
         open_apps = pygetwindow.getAllTitles()
-        if window_title in open_apps:
+        if "fuscript" in open_apps:
             sys.exit(2)
         app_not_open_but_lock_exists()
         return
@@ -106,7 +106,7 @@ def make_web_server() -> Flask:
 
 
 def main(resolve):
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger()
 
     logger.info("Starting CatDV Panel...")
     logger.info('Python %s on %s' % (sys.version, sys.platform))
@@ -136,7 +136,7 @@ def main(resolve):
 
     try:
         lock_path.touch(exist_ok=False)
-        webview.start(debug=False, gui=choose_web_renderer(), func=on_start)
+        webview.start(debug=logger.getEffectiveLevel() <= logging.DEBUG, gui=choose_web_renderer(), func=on_start)
     finally:
         Config.dump_to_file()
         lock_path.unlink()
